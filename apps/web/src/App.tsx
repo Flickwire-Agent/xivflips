@@ -991,12 +991,12 @@ function SettingsPage() {
   const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
   const worlds = useQuery({ queryKey: ["worlds"], queryFn: api.getWorlds });
   const [worldId, setWorldId] = useState("");
-  const [taxRateBps, setTaxRateBps] = useState<string | number>(500);
+  const [taxRatePercent, setTaxRatePercent] = useState<string | number>(5);
   const update = useMutation({
     mutationFn: () =>
       api.updateSettings({
         homeWorldId: worldId ? Number(worldId) : null,
-        defaultTaxRateBps: toInt(taxRateBps),
+        defaultTaxRateBps: Math.round(Number(taxRatePercent) * 100),
       }),
     onSuccess: () => {
       notifications.show({ color: "green", message: "Settings saved" });
@@ -1010,7 +1010,7 @@ function SettingsPage() {
 
   function hydrate() {
     setWorldId(me.data?.user.homeWorldId ? String(me.data.user.homeWorldId) : "");
-    setTaxRateBps(me.data?.user.defaultTaxRateBps ?? 500);
+    setTaxRatePercent((me.data?.user.defaultTaxRateBps ?? 500) / 100);
   }
 
   return (
@@ -1033,11 +1033,13 @@ function SettingsPage() {
             label="Home world"
           />
           <NumberInput
-            label="Default tax bps"
-            value={taxRateBps}
-            onChange={setTaxRateBps}
+            label="Default tax rate"
+            suffix="%"
+            value={taxRatePercent}
+            onChange={setTaxRatePercent}
             min={0}
-            max={10000}
+            max={100}
+            decimalScale={2}
           />
           <Group grow>
             <Button variant="light" onClick={hydrate}>
