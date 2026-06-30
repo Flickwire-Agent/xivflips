@@ -49,7 +49,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
-import { useApiClient } from "./api";
+import { apiUrl, useApiClient } from "./api";
 import { authConfigured } from "./env";
 
 const statusFilters = [
@@ -157,9 +157,11 @@ function WorldSelect(props: {
 }
 
 function LandingPage() {
-  const { isAuthenticated, loginWithRedirect } = useAuth0();
+  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+  const api = useApiClient();
+  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false, enabled: !isLoading });
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated || me.isSuccess) return <Navigate to="/dashboard" replace />;
 
   return (
     <main className="hero">
@@ -179,17 +181,28 @@ function LandingPage() {
           </Box>
           {!authConfigured ? (
             <Alert color="yellow" title="Auth0 setup required">
-              Add Auth0 values to the environment before login is available.
+              Auth0 login is unavailable until its environment values are configured.
             </Alert>
           ) : null}
-          <Button
-            size="lg"
-            leftSection={<Sparkles size={18} />}
-            disabled={!authConfigured}
-            onClick={() => loginWithRedirect()}
-          >
-            Log in to start tracking
-          </Button>
+          <Stack gap="xs">
+            <Button
+              size="lg"
+              leftSection={<Sparkles size={18} />}
+              onClick={() => {
+                window.location.href = apiUrl("/auth/xivauth/start");
+              }}
+            >
+              Log in with XIVAuth
+            </Button>
+            <Button
+              size="lg"
+              variant="light"
+              disabled={!authConfigured}
+              onClick={() => loginWithRedirect()}
+            >
+              Log in with Auth0
+            </Button>
+          </Stack>
           <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="sm">
             <Paper p="md" radius="lg" bg="rgba(99, 102, 241, 0.12)">
               <Text fw={700}>Profit</Text>
@@ -223,9 +236,16 @@ function LoginRequired() {
       <Paper className="glass-card" p="xl" radius="xl" maw={420}>
         <Stack>
           <Title order={2}>Login required</Title>
-          <Text c="dimmed">All flip tracking features are private to your Auth0 account.</Text>
-          <Button disabled={!authConfigured} onClick={() => loginWithRedirect()}>
-            Log in
+          <Text c="dimmed">All flip tracking features are private to your account.</Text>
+          <Button
+            onClick={() => {
+              window.location.href = apiUrl("/auth/xivauth/start");
+            }}
+          >
+            Log in with XIVAuth
+          </Button>
+          <Button variant="light" disabled={!authConfigured} onClick={() => loginWithRedirect()}>
+            Log in with Auth0
           </Button>
         </Stack>
       </Paper>
@@ -255,21 +275,29 @@ function BottomNav() {
 
 function ProtectedShell() {
   const { isLoading, isAuthenticated, logout, user } = useAuth0();
+  const api = useApiClient();
+  const navigate = useNavigate();
   const location = useLocation();
+  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false, enabled: !isLoading });
 
-  if (!authConfigured) {
-    return (
-      <main className="hero">
-        <Alert color="yellow" title="Auth0 is not configured" maw={460}>
-          Set `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, and `VITE_AUTH0_AUDIENCE` to use the
-          authenticated app.
-        </Alert>
-      </main>
-    );
+  if (isLoading || me.isLoading) return <LoadingView />;
+  if (!isAuthenticated && !me.isSuccess) return <LoginRequired />;
+
+  const currentUserName =
+    user?.name ??
+    user?.email ??
+    me.data?.user.displayName ??
+    me.data?.user.email ??
+    "Market tracker";
+
+  async function handleLogout() {
+    await api.logoutSession().catch(() => undefined);
+    if (isAuthenticated) {
+      logout({ logoutParams: { returnTo: window.location.origin } });
+      return;
+    }
+    navigate("/", { replace: true });
   }
-
-  if (isLoading) return <LoadingView />;
-  if (!isAuthenticated) return <LoginRequired />;
 
   return (
     <div className="app-shell">
@@ -280,14 +308,10 @@ function ProtectedShell() {
               XIV Flips
             </Text>
             <Text fw={700} truncate="end" maw={240}>
-              {user?.name ?? user?.email ?? "Market tracker"}
+              {currentUserName}
             </Text>
           </Box>
-          <ActionIcon
-            variant="subtle"
-            aria-label="Log out"
-            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-          >
+          <ActionIcon variant="subtle" aria-label="Log out" onClick={handleLogout}>
             <LogOut size={18} />
           </ActionIcon>
         </Group>
@@ -1004,6 +1028,13 @@ function SettingsPage() {
     },
     onError: notifyError,
   });
+  const linkXivauth = useMutation({
+    mutationFn: api.getXivauthLinkUrl,
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+    onError: notifyError,
+  });
 
   useEffect(() => {
     setWorldId(me.data?.user.homeWorldId ? String(me.data.user.homeWorldId) : "");
@@ -1025,7 +1056,51 @@ function SettingsPage() {
             <Text fw={800}>
               {me.data?.user.displayName ?? me.data?.user.email ?? "Authenticated user"}
             </Text>
+            <Text size="xs" c="dimmed">
+              Signed in with {me.data?.claims.provider === "xivauth" ? "XIVAuth" : "Auth0"}
+            </Text>
           </Box>
+          <Divider />
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Box>
+                <Text fw={800}>XIVAuth</Text>
+                <Text size="sm" c="dimmed">
+                  Link a verified FFXIV character for account recovery and future character-aware
+                  defaults.
+                </Text>
+              </Box>
+              <Button
+                variant="light"
+                loading={linkXivauth.isPending}
+                onClick={() => linkXivauth.mutate()}
+              >
+                {me.data?.xivauthCharacters.length ? "Refresh link" : "Link XIVAuth"}
+              </Button>
+            </Group>
+            {me.data?.xivauthCharacters.length ? (
+              <Stack gap="xs">
+                {me.data.xivauthCharacters.map((character) => (
+                  <Paper key={character.id} p="sm" radius="lg" bg="rgba(255,255,255,0.04)">
+                    <Group justify="space-between" wrap="nowrap">
+                      <Box>
+                        <Text fw={700}>{character.name}</Text>
+                        <Text size="sm" c="dimmed">
+                          {character.homeWorld} • {character.dataCenter}
+                        </Text>
+                      </Box>
+                      <Badge variant="light">Verified</Badge>
+                    </Group>
+                  </Paper>
+                ))}
+              </Stack>
+            ) : (
+              <Text size="sm" c="dimmed">
+                No XIVAuth character linked yet.
+              </Text>
+            )}
+          </Stack>
+          <Divider />
           <WorldSelect
             worlds={worlds.data?.worlds ?? []}
             value={worldId}

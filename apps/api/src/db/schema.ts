@@ -37,6 +37,46 @@ export const users = pgTable(
   (table) => [index("users_auth0_subject_idx").on(table.auth0Subject)],
 );
 
+export const xivauthAccounts = pgTable(
+  "xivauth_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    xivauthUserId: text("xivauth_user_id").notNull().unique(),
+    email: text("email"),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("xivauth_accounts_user_idx").on(table.userId),
+    index("xivauth_accounts_user_id_idx").on(table.xivauthUserId),
+  ],
+);
+
+export const xivauthCharacters = pgTable(
+  "xivauth_characters",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    persistentKey: text("persistent_key").notNull().unique(),
+    lodestoneId: integer("lodestone_id").notNull(),
+    name: text("name").notNull(),
+    homeWorld: text("home_world").notNull(),
+    dataCenter: text("data_center").notNull(),
+    avatarUrl: text("avatar_url"),
+    portraitUrl: text("portrait_url"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (table) => [
+    index("xivauth_characters_user_idx").on(table.userId),
+    uniqueIndex("xivauth_characters_user_lodestone_idx").on(table.userId, table.lodestoneId),
+  ],
+);
+
 export const items = pgTable(
   "items",
   {
@@ -207,6 +247,8 @@ export const marketSnapshots = pgTable(
 );
 
 export type UserRow = typeof users.$inferSelect;
+export type XivauthAccountRow = typeof xivauthAccounts.$inferSelect;
+export type XivauthCharacterRow = typeof xivauthCharacters.$inferSelect;
 export type ItemRow = typeof items.$inferSelect;
 export type WorldRow = typeof worlds.$inferSelect;
 export type FlipRow = typeof flips.$inferSelect;

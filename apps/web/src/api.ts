@@ -7,7 +7,7 @@ import type {
   WatchlistItemDto,
   WorldDto,
 } from "@xivflips/shared";
-import { env } from "./env";
+import { authConfigured, env } from "./env";
 
 type ApiOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -22,28 +22,49 @@ export type MeResponse = {
     homeWorldId: number | null;
     defaultTaxRateBps: number;
   };
+  claims: {
+    provider: "auth0" | "xivauth";
+  };
+  xivauthCharacters: Array<{
+    id: string;
+    persistentKey: string;
+    lodestoneId: number;
+    name: string;
+    homeWorld: string;
+    dataCenter: string;
+    avatarUrl: string | null;
+    portraitUrl: string | null;
+    verifiedAt: string | null;
+  }>;
 };
 
-function apiUrl(path: string): string {
+export function apiUrl(path: string): string {
   const base = env.apiBaseUrl.endsWith("/") ? env.apiBaseUrl.slice(0, -1) : env.apiBaseUrl;
   const suffix = path.startsWith("/") ? path : `/${path}`;
   return `${base}${suffix}`;
 }
 
 export function useApiClient() {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
 
   async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
-    const token = await getAccessTokenSilently({
-      authorizationParams: { audience: env.auth0Audience },
-    });
+    const token =
+      authConfigured && isAuthenticated
+        ? await getAccessTokenSilently({
+            authorizationParams: { audience: env.auth0Audience },
+          })
+        : null;
     const init: RequestInit = {
       method: options.method ?? "GET",
       headers: {
-        authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
+      credentials: "include",
     };
+
+    if (token) {
+      init.headers = { ...init.headers, authorization: `Bearer ${token}` };
+    }
 
     if (options.body !== undefined) {
       init.body = JSON.stringify(options.body);
@@ -70,7 +91,9 @@ export function useApiClient() {
   return {
     getMe: () => request<MeResponse>("/me"),
     updateSettings: (body: { homeWorldId?: number | null; defaultTaxRateBps?: number }) =>
-      request<MeResponse>("/me/settings", { method: "PATCH", body }),
+      request<{ user: MeResponse["user"] }>("/me/settings", { method: "PATCH", body }),
+    getXivauthLinkUrl: () => request<{ url: string }>("/auth/xivauth/link"),
+    logoutSession: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
     getWorlds: () => request<{ worlds: WorldDto[] }>("/worlds"),
     searchItems: (query: string) =>
       request<{ items: ItemDto[] }>(`/items/search?q=${encodeURIComponent(query)}`),

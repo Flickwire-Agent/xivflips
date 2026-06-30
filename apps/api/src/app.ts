@@ -7,6 +7,7 @@ import { HttpError } from "./http/errors.js";
 import { requireAuth, type AppEnv } from "./http/auth.js";
 import { registerHealthRoute } from "./routes/health.js";
 import { registerProtectedRoutes } from "./routes/protected.js";
+import { registerXivauthRoutes } from "./routes/xivauth.js";
 
 export function createApp() {
   const app = new Hono<AppEnv>().basePath("/api");
@@ -17,12 +18,13 @@ export function createApp() {
       origin: isProduction() ? [config.appBaseUrl] : [config.appBaseUrl, "http://localhost:5173"],
       allowHeaders: ["authorization", "content-type"],
       allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-      credentials: false,
+      credentials: true,
     }),
   );
   app.use("*", logger());
 
   registerHealthRoute(app);
+  registerXivauthRoutes(app);
 
   app.use("*", requireAuth);
   registerProtectedRoutes(app);

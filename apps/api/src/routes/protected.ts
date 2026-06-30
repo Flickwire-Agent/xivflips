@@ -27,6 +27,7 @@ import {
   users,
   watchlistItems,
   worlds,
+  xivauthCharacters,
   type FlipRow,
   type ItemRow,
   type ListingRow,
@@ -57,6 +58,7 @@ import {
   upsertItem,
   type SnapshotTarget,
 } from "../services/market.js";
+import { buildXivauthAuthorizeUrl } from "../services/xivauth.js";
 
 const uuidParamSchema = z.object({ id: z.uuid() });
 const flipUuidParamSchema = z.object({ id: z.uuid() });
@@ -278,7 +280,34 @@ async function getEventFlip(
 }
 
 export function registerProtectedRoutes(app: Hono<AppEnv>) {
-  app.get("/me", (c) => c.json({ user: serializeUser(c.get("user")), claims: c.get("claims") }));
+  app.get("/me", async (c) => {
+    const db = getDb();
+    const characters = await db
+      .select()
+      .from(xivauthCharacters)
+      .where(eq(xivauthCharacters.userId, c.get("user").id))
+      .orderBy(xivauthCharacters.name);
+
+    return c.json({
+      user: serializeUser(c.get("user")),
+      claims: c.get("claims"),
+      xivauthCharacters: characters.map((character) => ({
+        id: character.id,
+        persistentKey: character.persistentKey,
+        lodestoneId: character.lodestoneId,
+        name: character.name,
+        homeWorld: character.homeWorld,
+        dataCenter: character.dataCenter,
+        avatarUrl: character.avatarUrl,
+        portraitUrl: character.portraitUrl,
+        verifiedAt: character.verifiedAt?.toISOString() ?? null,
+      })),
+    });
+  });
+
+  app.get("/auth/xivauth/link", async (c) => {
+    return c.json({ url: await buildXivauthAuthorizeUrl("link", c.get("user").id) });
+  });
 
   app.patch("/me/settings", async (c) => {
     const input = await readJson(c, updateUserSettingsSchema);

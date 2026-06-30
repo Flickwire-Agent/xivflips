@@ -21,6 +21,15 @@ export const config = {
     audience: optionalUrl(process.env.AUTH0_AUDIENCE),
     issuerBaseUrl: withTrailingSlash(process.env.AUTH0_ISSUER_BASE_URL),
   },
+  appSessionSecret:
+    process.env.APP_SESSION_SECRET ??
+    (process.env.NODE_ENV === "production" ? "" : "xivflips-local-session-secret"),
+  xivauth: {
+    baseUrl: process.env.XIVAUTH_BASE_URL ?? "https://xivauth.net",
+    clientId: optionalUrl(process.env.XIVAUTH_CLIENT_ID),
+    clientSecret: optionalUrl(process.env.XIVAUTH_CLIENT_SECRET),
+    redirectUri: optionalUrl(process.env.XIVAUTH_REDIRECT_URI),
+  },
   xivarbitrageApiBaseUrl:
     process.env.XIVARBITRAGE_API_BASE_URL ?? "https://xivarbitrage.projects.blueskye.co.uk/api",
   marketSnapshotRetentionDays: Number(process.env.MARKET_SNAPSHOT_RETENTION_DAYS ?? 90),
