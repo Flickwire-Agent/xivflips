@@ -18,7 +18,7 @@ function iso(value: Date | null): string | null {
 export function serializeUser(user: UserRow) {
   return {
     id: user.id,
-    auth0Subject: user.auth0Subject,
+    subject: user.subject,
     email: user.email,
     displayName: user.displayName,
     homeWorldId: user.homeWorldId,

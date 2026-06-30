@@ -6,7 +6,7 @@ Status key: `[ ]` not started, `[~]` in progress, `[x]` complete, `[!]` blocked.
 
 - [ ] Review `IMPLEMENTATION_PLAN.md` and this task list.
 - [ ] Confirm project hostname: `xivflips.projects.blueskye.co.uk`.
-- [ ] Confirm Auth0 tenant/app/API details can be created or supplied.
+- [ ] Confirm XIVAuth OAuth client details can be created or supplied.
 - [ ] Confirm hard-login requirement: only `/` is public; every other route and API feature requires login.
 - [ ] Confirm daily xivarbitrage snapshot worker is acceptable for MVP, with no real-time alerts.
 
@@ -73,19 +73,19 @@ Acceptance check:
 - API starts locally.
 - `GET /api/health` returns healthy status when database is available.
 
-## Phase 5: Auth0 API Security
+## Phase 5: XIVAuth API Security
 
-- [ ] Add Auth0 JWT validation middleware using `jose`.
-- [ ] Validate issuer, audience, expiry, signature, and RS256 algorithm.
-- [ ] Add local user sync on authenticated requests.
+- [ ] Add XIVAuth OAuth callback and signed app session middleware using `jose`.
+- [ ] Validate signed app sessions.
+- [ ] Add local user creation/linking on XIVAuth login.
 - [ ] Add `GET /api/me`.
 - [ ] Add `PATCH /api/me/settings`.
 - [ ] Add tests or fixtures for authenticated and unauthenticated API calls.
 
 Acceptance check:
 
-- All protected API routes reject missing/invalid tokens.
-- Valid Auth0 tokens map to local users.
+- All protected API routes reject missing/invalid sessions.
+- Valid XIVAuth logins map to local users.
 
 ## Phase 6: Metadata And Market Services
 
@@ -152,8 +152,8 @@ Acceptance check:
 
 - [ ] Create `@xivflips/web` Vite React package.
 - [ ] Add Mantine provider, notifications, theme, and global CSS.
-- [ ] Add Auth0 React provider.
-- [ ] Add API client that attaches Auth0 access tokens.
+- [ ] Add XIVAuth login flow.
+- [ ] Add API client that sends app session cookies.
 - [ ] Add TanStack Query provider.
 - [ ] Add routing.
 - [ ] Add public landing page at `/`.
@@ -206,7 +206,7 @@ Acceptance check:
 - [ ] Run `pnpm build`.
 - [ ] Run API health check locally.
 - [ ] Run market snapshot worker locally with a small target set.
-- [ ] Manually test Auth0 login/logout.
+- [ ] Manually test XIVAuth login/logout.
 - [ ] Manually test mobile viewport flows.
 
 Acceptance check:
@@ -217,7 +217,7 @@ Acceptance check:
 
 - [ ] Create production PostgreSQL database/user.
 - [ ] Apply migrations in production.
-- [ ] Configure Auth0 production callback/logout/web origin URLs.
+- [ ] Configure XIVAuth production callback URL.
 - [ ] Build web and API.
 - [ ] Configure pm2 API process.
 - [ ] Configure Caddy/static serving/reverse proxy.
@@ -240,7 +240,7 @@ Acceptance check:
 - [ ] Add `Flickwire` as admin collaborator for a new repo.
 - [ ] Push commits to GitHub.
 - [ ] Confirm clean git status.
-- [ ] Report deployment URL, Auth0 status, database status, worker schedule, commits, and any blockers.
+- [ ] Report deployment URL, XIVAuth status, database status, worker schedule, commits, and any blockers.
 
 Acceptance check:
 

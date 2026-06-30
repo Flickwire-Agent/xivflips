@@ -27,14 +27,14 @@ export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    auth0Subject: text("auth0_subject").notNull().unique(),
+    subject: text("subject").notNull().unique(),
     email: text("email"),
     displayName: text("display_name"),
     homeWorldId: integer("home_world_id"),
     defaultTaxRateBps: integer("default_tax_rate_bps").notNull().default(500),
     ...timestamps(),
   },
-  (table) => [index("users_auth0_subject_idx").on(table.auth0Subject)],
+  (table) => [index("users_subject_idx").on(table.subject)],
 );
 
 export const xivauthAccounts = pgTable(

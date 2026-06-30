@@ -10,7 +10,7 @@ Build a portable, mobile-first web app for tracking Final Fantasy XIV market fli
 - Require login for all functionality except a simple public landing page.
 - Optimize primarily for mobile usage.
 - Use PostgreSQL for persistence.
-- Use Auth0 for authentication.
+- Use XIVAuth for authentication.
 - Use a background task to pull market snapshot data from the xivarbitrage API once daily.
 - Wait for human sign-off before implementation beyond planning scaffolding.
 
@@ -21,7 +21,7 @@ Use a pnpm workspace with a static SPA, a portable Hono API, and a shared packag
 ```text
 xivflips.projects.blueskye.co.uk/
 ├── apps/
-│   ├── api/               # Hono API, Auth0 JWT validation, Drizzle/Postgres, worker entrypoints
+│   ├── api/               # Hono API, XIVAuth OAuth/session handling, Drizzle/Postgres, worker entrypoints
 │   └── web/               # Vite React SPA, mobile-first UI
 ├── packages/
 │   └── shared/            # Shared zod schemas, types, constants, and profit math
@@ -38,7 +38,7 @@ xivflips.projects.blueskye.co.uk/
 - Vite for a plain static build that can be served by Caddy, nginx, Hono, object storage, or static hosts.
 - React 19 for the UI.
 - Mantine v9 for accessible mobile-friendly primitives, forms, modals, notifications, and charts.
-- Auth0 React SDK for login, logout, token acquisition, and session-aware rendering.
+- Signed app session cookie for login, logout, and session-aware rendering after XIVAuth OAuth.
 - TanStack Query for API state, caching, retries, loading states, and mutation invalidation.
 - Wouter or React Router for SPA routing. Prefer React Router if nested layouts become useful; otherwise Wouter is smaller.
 
@@ -47,7 +47,7 @@ xivflips.projects.blueskye.co.uk/
 - Hono for portable HTTP routing.
 - Node adapter initially for local pm2 deployment.
 - Keep runtime-specific code at entrypoints only, so core routes/services remain portable.
-- `jose` for Auth0 JWT validation against the Auth0 JWKS endpoint.
+- `jose` for signed app session and OAuth state tokens.
 - Zod for request/response validation.
 
 ### Database
@@ -80,22 +80,21 @@ All app routes require login:
 Frontend enforcement:
 
 - Public landing page checks session and can redirect authenticated users to `/dashboard`.
-- Protected route shell requires an Auth0 session.
+- Protected route shell requires an app session created through XIVAuth.
 - If unauthenticated, show a compact mobile-friendly login prompt rather than the app shell.
 
 API enforcement:
 
-- All `/api/*` routes require a valid bearer token except `/api/health` and any future public metadata endpoint explicitly marked public.
-- API validates Auth0 JWT issuer, audience, algorithm, expiry, and signature.
-- On first valid request, sync the Auth0 subject into a local `users` row.
+- All `/api/*` routes require a valid app session cookie except `/api/health` and public OAuth callback/start routes.
+- API validates signed app sessions issued after XIVAuth OAuth login.
+- On first XIVAuth login, create or link a local `users` row.
 
-Required Auth0 configuration:
+Required XIVAuth configuration:
 
-- Application type: Single Page Application.
-- API audience: e.g. `https://xivflips.projects.blueskye.co.uk/api`.
-- Allowed callback URLs: local dev and production host.
-- Allowed logout URLs: local dev and production host.
-- Allowed web origins: local dev and production host.
+- OAuth client type: confidential application.
+- Grant flow: authorization code.
+- Scopes: `user character`.
+- Redirect URI: local dev and production callback route.
 
 ## Mobile-First Product Design
 
@@ -123,8 +122,8 @@ Core mobile views:
 
 ### Included
 
-- Login/logout through Auth0.
-- Local user sync from Auth0 subject.
+- Login/logout through XIVAuth.
+- Local user creation/linking from XIVAuth identity.
 - Create, edit, archive, and delete tracked flips.
 - Record purchases for an item/world/data center.
 - Record listing attempts.
@@ -155,7 +154,7 @@ Use snake_case table names in SQL and camelCase in TypeScript.
 ### users
 
 - `id` UUID primary key.
-- `auth0_subject` unique, required.
+- `subject` unique, required.
 - `email` nullable.
 - `display_name` nullable.
 - `home_world_id` nullable.
@@ -294,7 +293,7 @@ Public routes:
 
 Protected routes:
 
-- `GET /api/me`: current Auth0/local user.
+- `GET /api/me`: current local user.
 - `PATCH /api/me/settings`: update default world and tax rate.
 - `GET /api/worlds`: world and data-center list.
 - `GET /api/items/search?q=`: search cached items, then fallback to xivarbitrage/XIVAPI if needed.
@@ -410,7 +409,7 @@ Initial deployment on this host:
 - API exposed under the same hostname at `/api` to avoid CORS complexity.
 - Background snapshot worker scheduled daily via cron or systemd timer.
 - PostgreSQL database and user created locally.
-- Auth0 application configured for production and local dev URLs.
+- XIVAuth OAuth client configured for production and local dev callback URLs.
 - Add project to `projects.blueskye.co.uk` registry after it is live.
 
 Expected environment variables:
@@ -420,10 +419,11 @@ DATABASE_URL=postgresql://xivflips:local_dev_password@localhost:5432/xivflips
 PORT=4010
 APP_BASE_URL=http://localhost:5173
 API_BASE_URL=http://localhost:4010
-AUTH0_DOMAIN=
-AUTH0_CLIENT_ID=
-AUTH0_AUDIENCE=https://xivflips.projects.blueskye.co.uk/api
-AUTH0_ISSUER_BASE_URL=https://your-tenant.eu.auth0.com/
+APP_SESSION_SECRET=replace-with-a-long-random-secret
+XIVAUTH_BASE_URL=https://xivauth.net
+XIVAUTH_CLIENT_ID=
+XIVAUTH_CLIENT_SECRET=
+XIVAUTH_REDIRECT_URI=http://localhost:4010/api/auth/xivauth/callback
 XIVARBITRAGE_API_BASE_URL=https://xivarbitrage.projects.blueskye.co.uk/api
 MARKET_SNAPSHOT_RETENTION_DAYS=90
 ```
@@ -432,14 +432,11 @@ Frontend build-time variables:
 
 ```bash
 VITE_API_BASE_URL=/api
-VITE_AUTH0_DOMAIN=
-VITE_AUTH0_CLIENT_ID=
-VITE_AUTH0_AUDIENCE=https://xivflips.projects.blueskye.co.uk/api
 ```
 
 ## Risks And Mitigations
 
-- Auth0 SPA/API configuration can be fiddly: validate local login before building deeper features.
+- XIVAuth OAuth client configuration can be fiddly: validate local login before building deeper features.
 - Mobile data entry can become tedious: prioritize fast forms, sticky actions, and sane defaults.
 - xivarbitrage API shape may change: isolate API mapping in a single service and store raw snapshots.
 - Daily snapshots can be stale for fast-moving markets: show snapshot age clearly and add manual refresh for specific items.

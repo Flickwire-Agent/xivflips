@@ -10,11 +10,11 @@ describe("API auth boundary", () => {
     await expect(response.json()).resolves.toMatchObject({ ok: false, database: false });
   });
 
-  it("rejects protected routes without a bearer token", async () => {
+  it("rejects protected routes without a session", async () => {
     const app = createApp();
     const response = await app.fetch(new Request("http://localhost/api/dashboard"));
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toMatchObject({ error: "Missing bearer token" });
+    await expect(response.json()).resolves.toMatchObject({ error: "Missing session" });
   });
 });

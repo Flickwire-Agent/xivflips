@@ -1,4 +1,3 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import type {
   DashboardDto,
   FlipDetailDto,
@@ -7,7 +6,7 @@ import type {
   WatchlistItemDto,
   WorldDto,
 } from "@xivflips/shared";
-import { authConfigured, env } from "./env";
+import { env } from "./env";
 
 type ApiOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -23,7 +22,7 @@ export type MeResponse = {
     defaultTaxRateBps: number;
   };
   claims: {
-    provider: "auth0" | "xivauth";
+    provider: "xivauth";
   };
   xivauthCharacters: Array<{
     id: string;
@@ -45,15 +44,7 @@ export function apiUrl(path: string): string {
 }
 
 export function useApiClient() {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
-
   async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
-    const token =
-      authConfigured && isAuthenticated
-        ? await getAccessTokenSilently({
-            authorizationParams: { audience: env.auth0Audience },
-          })
-        : null;
     const init: RequestInit = {
       method: options.method ?? "GET",
       headers: {
@@ -61,10 +52,6 @@ export function useApiClient() {
       },
       credentials: "include",
     };
-
-    if (token) {
-      init.headers = { ...init.headers, authorization: `Bearer ${token}` };
-    }
 
     if (options.body !== undefined) {
       init.body = JSON.stringify(options.body);

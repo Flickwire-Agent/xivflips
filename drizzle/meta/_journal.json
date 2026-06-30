@@ -15,6 +15,13 @@
       "when": 1782861366979,
       "tag": "0001_add_xivauth_login",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782862218671,
+      "tag": "0002_remove_auth0_subject",
+      "breakpoints": true
     }
   ]
 }

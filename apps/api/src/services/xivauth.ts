@@ -218,7 +218,7 @@ export async function completeXivauthLogin(
     [user] = await db
       .insert(users)
       .values({
-        auth0Subject: `xivauth:${xivauthUser.id}`,
+        subject: `xivauth:${xivauthUser.id}`,
         email: xivauthUser.email ?? null,
         displayName,
       })

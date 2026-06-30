@@ -1,4 +1,3 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import {
   ActionIcon,
   Alert,
@@ -50,7 +49,6 @@ import {
   useParams,
 } from "react-router-dom";
 import { apiUrl, useApiClient } from "./api";
-import { authConfigured } from "./env";
 
 const statusFilters = [
   { value: "all", label: "All" },
@@ -157,11 +155,10 @@ function WorldSelect(props: {
 }
 
 function LandingPage() {
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
   const api = useApiClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false, enabled: !isLoading });
+  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false });
 
-  if (isAuthenticated || me.isSuccess) return <Navigate to="/dashboard" replace />;
+  if (me.isSuccess) return <Navigate to="/dashboard" replace />;
 
   return (
     <main className="hero">
@@ -179,30 +176,15 @@ function LandingPage() {
               keeps your profit math, inventory value, and daily market context in one place.
             </Text>
           </Box>
-          {!authConfigured ? (
-            <Alert color="yellow" title="Auth0 setup required">
-              Auth0 login is unavailable until its environment values are configured.
-            </Alert>
-          ) : null}
-          <Stack gap="xs">
-            <Button
-              size="lg"
-              leftSection={<Sparkles size={18} />}
-              onClick={() => {
-                window.location.href = apiUrl("/auth/xivauth/start");
-              }}
-            >
-              Log in with XIVAuth
-            </Button>
-            <Button
-              size="lg"
-              variant="light"
-              disabled={!authConfigured}
-              onClick={() => loginWithRedirect()}
-            >
-              Log in with Auth0
-            </Button>
-          </Stack>
+          <Button
+            size="lg"
+            leftSection={<Sparkles size={18} />}
+            onClick={() => {
+              window.location.href = apiUrl("/auth/xivauth/start");
+            }}
+          >
+            Log in with XIVAuth
+          </Button>
           <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="sm">
             <Paper p="md" radius="lg" bg="rgba(99, 102, 241, 0.12)">
               <Text fw={700}>Profit</Text>
@@ -230,7 +212,6 @@ function LandingPage() {
 }
 
 function LoginRequired() {
-  const { loginWithRedirect } = useAuth0();
   return (
     <main className="hero">
       <Paper className="glass-card" p="xl" radius="xl" maw={420}>
@@ -243,9 +224,6 @@ function LoginRequired() {
             }}
           >
             Log in with XIVAuth
-          </Button>
-          <Button variant="light" disabled={!authConfigured} onClick={() => loginWithRedirect()}>
-            Log in with Auth0
           </Button>
         </Stack>
       </Paper>
@@ -274,28 +252,22 @@ function BottomNav() {
 }
 
 function ProtectedShell() {
-  const { isLoading, isAuthenticated, logout, user } = useAuth0();
   const api = useApiClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false, enabled: !isLoading });
+  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe, retry: false });
 
-  if (isLoading || me.isLoading) return <LoadingView />;
-  if (!isAuthenticated && !me.isSuccess) return <LoginRequired />;
+  if (me.isLoading) return <LoadingView />;
+  if (!me.isSuccess) return <LoginRequired />;
 
   const currentUserName =
-    user?.name ??
-    user?.email ??
-    me.data?.user.displayName ??
-    me.data?.user.email ??
+    me.data.user.displayName ??
+    me.data.user.email ??
+    me.data.xivauthCharacters[0]?.name ??
     "Market tracker";
 
   async function handleLogout() {
     await api.logoutSession().catch(() => undefined);
-    if (isAuthenticated) {
-      logout({ logoutParams: { returnTo: window.location.origin } });
-      return;
-    }
     navigate("/", { replace: true });
   }
 
@@ -1057,7 +1029,7 @@ function SettingsPage() {
               {me.data?.user.displayName ?? me.data?.user.email ?? "Authenticated user"}
             </Text>
             <Text size="xs" c="dimmed">
-              Signed in with {me.data?.claims.provider === "xivauth" ? "XIVAuth" : "Auth0"}
+              Signed in with XIVAuth
             </Text>
           </Box>
           <Divider />

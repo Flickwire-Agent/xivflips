@@ -10,7 +10,6 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "@auth0/auth0-react": "~2.4.0",
     "@mantine/charts": "~9.3.1",
     "@mantine/core": "~9.3.1",
     "@mantine/hooks": "~9.3.1",
