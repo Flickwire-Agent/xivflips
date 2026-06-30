@@ -58,6 +58,7 @@ const statusFilters = [
   { value: "listed", label: "Listed" },
   { value: "partially_sold", label: "Partial" },
   { value: "sold", label: "Sold" },
+  { value: "archived", label: "Archived" },
 ];
 
 function toInt(value: string | number): number {
@@ -609,14 +610,14 @@ function EventForm(props: {
   const [quantity, setQuantity] = useState<string | number>(1);
   const [unitPrice, setUnitPrice] = useState<string | number>("");
   const [worldId, setWorldId] = useState("");
-  const [taxRateBps, setTaxRateBps] = useState<string | number>(500);
+  const [taxRatePercent, setTaxRatePercent] = useState<string | number>(5);
   const mutation = useMutation({
     mutationFn: () => {
       const body = {
         quantity: toInt(quantity),
         unitPrice: toInt(unitPrice),
         worldId: worldId ? Number(worldId) : null,
-        taxRateBps: props.type === "sale" ? toInt(taxRateBps) : undefined,
+        taxRateBps: props.type === "sale" ? Math.round(Number(taxRatePercent) * 100) : undefined,
       };
       if (props.type === "purchase") return api.addPurchase(props.flipId, body);
       if (props.type === "listing") return api.addListing(props.flipId, body);
@@ -658,11 +659,13 @@ function EventForm(props: {
         </SimpleGrid>
         {props.type === "sale" ? (
           <NumberInput
-            label="Tax bps"
-            value={taxRateBps}
-            onChange={setTaxRateBps}
+            label="Tax rate"
+            suffix="%"
+            value={taxRatePercent}
+            onChange={setTaxRatePercent}
             min={0}
-            max={10000}
+            max={100}
+            decimalScale={2}
           />
         ) : null}
         <WorldSelect worlds={props.worlds} value={worldId} onChange={setWorldId} />
@@ -688,6 +691,15 @@ function FlipDetailPage() {
   const archive = useMutation({
     mutationFn: () => api.archiveFlip(id!),
     onSuccess: () => navigate("/flips"),
+    onError: notifyError,
+  });
+  const restore = useMutation({
+    mutationFn: () => api.restoreFlip(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["flip", id] });
+      queryClient.invalidateQueries({ queryKey: ["flips"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
     onError: notifyError,
   });
   const refresh = useMutation({
@@ -750,14 +762,20 @@ function FlipDetailPage() {
         >
           Refresh
         </Button>
-        <Button
-          color="red"
-          variant="subtle"
-          loading={archive.isPending}
-          onClick={() => archive.mutate()}
-        >
-          Archive
-        </Button>
+        {current.status === "archived" ? (
+          <Button variant="light" loading={restore.isPending} onClick={() => restore.mutate()}>
+            Restore
+          </Button>
+        ) : (
+          <Button
+            color="red"
+            variant="subtle"
+            loading={archive.isPending}
+            onClick={() => archive.mutate()}
+          >
+            Archive
+          </Button>
+        )}
       </Group>
       <Title order={2} size="h3">
         Timeline

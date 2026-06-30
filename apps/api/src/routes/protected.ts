@@ -170,7 +170,11 @@ async function listUserFlips(userId: string, status?: string, query?: string) {
   const statusFilter = status ? flipStatusSchema.parse(status) : undefined;
   const where = and(
     eq(flips.userId, userId),
-    statusFilter ? eq(flips.status, statusFilter) : undefined,
+    statusFilter === "active"
+      ? inArray(flips.status, ["active", "partially_sold"])
+      : statusFilter
+        ? eq(flips.status, statusFilter)
+        : undefined,
     query ? or(ilike(items.name, `%${query}%`), ilike(flips.notes, `%${query}%`)) : undefined,
   );
 
@@ -226,6 +230,22 @@ async function assertFlipOwner(userId: string, flipId: string): Promise<FlipRow>
     .limit(1);
   if (!flip) notFound("Flip not found");
   return flip;
+}
+
+async function inferRestoredStatus(flipId: string): Promise<FlipRow["status"]> {
+  const db = getDb();
+  const [purchaseRows, saleRows, listingRows] = await Promise.all([
+    db.select().from(purchases).where(eq(purchases.flipId, flipId)),
+    db.select().from(sales).where(eq(sales.flipId, flipId)),
+    db.select().from(listings).where(eq(listings.flipId, flipId)),
+  ]);
+  const purchasedQuantity = purchaseRows.reduce((total, purchase) => total + purchase.quantity, 0);
+  const soldQuantity = saleRows.reduce((total, sale) => total + sale.quantity, 0);
+
+  if (purchasedQuantity > 0 && soldQuantity >= purchasedQuantity) return "sold";
+  if (soldQuantity > 0) return "partially_sold";
+  if (listingRows.some((listing) => listing.status === "active")) return "listed";
+  return "active";
 }
 
 async function assertSaleQuantity(flipId: string, nextSale?: { id?: string; quantity: number }) {
@@ -431,6 +451,22 @@ export function registerProtectedRoutes(app: Hono<AppEnv>) {
       .set({ status: "archived", updatedAt: new Date() })
       .where(eq(flips.id, id));
     return c.json({ ok: true });
+  });
+
+  app.post("/flips/:id/restore", async (c) => {
+    const { id } = uuidParamSchema.parse(c.req.param());
+    await assertFlipOwner(c.get("user").id, id);
+    const status = await inferRestoredStatus(id);
+    const db = getDb();
+    await db
+      .update(flips)
+      .set({
+        status,
+        closedAt: status === "sold" ? undefined : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(flips.id, id));
+    return c.json({ flip: await serializeBundle(await getFlipBundle(c.get("user").id, id)) });
   });
 
   app.post("/flips/:id/purchases", async (c) => {

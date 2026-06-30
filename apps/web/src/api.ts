@@ -83,6 +83,8 @@ export function useApiClient() {
     updateFlip: (id: string, body: unknown) =>
       request<{ flip: FlipDetailDto }>(`/flips/${id}`, { method: "PATCH", body }),
     archiveFlip: (id: string) => request<{ ok: true }>(`/flips/${id}`, { method: "DELETE" }),
+    restoreFlip: (id: string) =>
+      request<{ flip: FlipDetailDto }>(`/flips/${id}/restore`, { method: "POST" }),
     addPurchase: (id: string, body: unknown) =>
       request<{ flip: FlipDetailDto }>(`/flips/${id}/purchases`, { method: "POST", body }),
     addListing: (id: string, body: unknown) =>
