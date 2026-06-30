@@ -1,0 +1,28 @@
+{
+  "name": "xivflips",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile-first Final Fantasy XIV market flip tracker.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --reporter=append-only build",
+    "check": "pnpm -r --reporter=append-only check",
+    "dev": "pnpm --parallel dev",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt .",
+    "lint": "oxlint --quiet .",
+    "prepare": "husky",
+    "test": "pnpm -r --if-present test",
+    "test:run": "pnpm -r --if-present test:run"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "~21.0.2",
+    "@commitlint/config-conventional": "~21.0.2",
+    "@types/node": "~25.9.3",
+    "husky": "~9.1.7",
+    "oxfmt": "~0.55.0",
+    "oxlint": "~1.70.0",
+    "typescript": "~6.0.3"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

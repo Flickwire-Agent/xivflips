@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+coverage/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+pnpm-debug.log*
+
+# System/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Runtime
+*.tsbuildinfo
+pm2.err
+pm2.log

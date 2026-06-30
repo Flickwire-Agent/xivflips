@@ -1,0 +1,33 @@
+{
+  "name": "@xivflips/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "vite --host 0.0.0.0",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@auth0/auth0-react": "~2.4.0",
+    "@mantine/charts": "~9.3.1",
+    "@mantine/core": "~9.3.1",
+    "@mantine/hooks": "~9.3.1",
+    "@mantine/notifications": "~9.3.1",
+    "@tanstack/react-query": "~5.101.0",
+    "@vitejs/plugin-react": "~6.0.2",
+    "@xivflips/shared": "workspace:*",
+    "lucide-react": "~1.17.0",
+    "react": "~19.2.7",
+    "react-dom": "~19.2.7",
+    "react-router-dom": "~7.10.1",
+    "vite": "~8.0.16",
+    "zod": "~4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.17",
+    "@types/react-dom": "~19.2.3",
+    "typescript": "~6.0.3"
+  }
+}
