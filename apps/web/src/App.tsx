@@ -39,7 +39,7 @@ import {
   Tag,
   WalletCards,
 } from "lucide-react";
-import { FormEvent, startTransition, useState } from "react";
+import { FormEvent, startTransition, useEffect, useState } from "react";
 import {
   NavLink,
   Navigate,
@@ -1005,13 +1005,13 @@ function SettingsPage() {
     onError: notifyError,
   });
 
-  if (me.isLoading) return <LoadingView />;
-  if (me.error) return <ErrorView error={me.error} />;
-
-  function hydrate() {
+  useEffect(() => {
     setWorldId(me.data?.user.homeWorldId ? String(me.data.user.homeWorldId) : "");
     setTaxRatePercent((me.data?.user.defaultTaxRateBps ?? 500) / 100);
-  }
+  }, [me.data?.user.defaultTaxRateBps, me.data?.user.homeWorldId]);
+
+  if (me.isLoading) return <LoadingView />;
+  if (me.error) return <ErrorView error={me.error} />;
 
   return (
     <Stack>
@@ -1041,14 +1041,9 @@ function SettingsPage() {
             max={100}
             decimalScale={2}
           />
-          <Group grow>
-            <Button variant="light" onClick={hydrate}>
-              Load current
-            </Button>
-            <Button loading={update.isPending} onClick={() => update.mutate()}>
-              Save
-            </Button>
-          </Group>
+          <Button loading={update.isPending} onClick={() => update.mutate()}>
+            Save
+          </Button>
         </Stack>
       </Paper>
     </Stack>
