@@ -20,9 +20,11 @@ export type MeResponse = {
     displayName: string | null;
     homeWorldId: number | null;
     defaultTaxRateBps: number;
+    isAdmin: boolean;
   };
   claims: {
     provider: "xivauth";
+    isAdmin: boolean;
   };
   xivauthCharacters: Array<{
     id: string;
@@ -34,6 +36,24 @@ export type MeResponse = {
     avatarUrl: string | null;
     portraitUrl: string | null;
     verifiedAt: string | null;
+  }>;
+};
+
+export type AdminUser = {
+  id: string;
+  subject: string;
+  email: string | null;
+  displayName: string | null;
+  homeWorldId: number | null;
+  defaultTaxRateBps: number;
+  isAdmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+  characters: Array<{
+    id: string;
+    name: string;
+    homeWorld: string;
+    dataCenter: string;
   }>;
 };
 
@@ -110,6 +130,15 @@ export function useApiClient() {
       request<{ checked: number; snapshots: number; failures: string[] }>("/market/refresh", {
         method: "POST",
         body: body ?? {},
+      }),
+    getAdminUsers: () => request<{ users: AdminUser[] }>("/admin/users"),
+    impersonateUser: (userId: string) =>
+      request<{
+        ok: true;
+        user: { id: string; email: string | null; displayName: string | null; isAdmin: boolean };
+      }>("/admin/impersonate", {
+        method: "POST",
+        body: { userId },
       }),
   };
 }

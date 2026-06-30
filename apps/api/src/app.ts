@@ -8,6 +8,7 @@ import { requireAuth, type AppEnv } from "./http/auth.js";
 import { registerHealthRoute } from "./routes/health.js";
 import { registerProtectedRoutes } from "./routes/protected.js";
 import { registerXivauthRoutes } from "./routes/xivauth.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 
 export function createApp() {
   const app = new Hono<AppEnv>().basePath("/api");
@@ -28,6 +29,7 @@ export function createApp() {
 
   app.use("*", requireAuth);
   registerProtectedRoutes(app);
+  registerAdminRoutes(app);
 
   app.notFound((c) => c.json({ error: "Not found" }, 404));
 

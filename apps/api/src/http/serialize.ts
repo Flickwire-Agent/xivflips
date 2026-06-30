@@ -23,6 +23,7 @@ export function serializeUser(user: UserRow) {
     displayName: user.displayName,
     homeWorldId: user.homeWorldId,
     defaultTaxRateBps: user.defaultTaxRateBps,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

@@ -5,13 +5,14 @@ import { eq } from "drizzle-orm";
 import { config } from "../config.js";
 import { getDb } from "../db/client.js";
 import { users, type UserRow } from "../db/schema.js";
-import { unauthorized, serviceUnavailable } from "./errors.js";
+import { unauthorized, serviceUnavailable, forbidden } from "./errors.js";
 
 export type AuthClaims = {
   subject: string;
   email: string | null;
   displayName: string | null;
   provider: "xivauth";
+  isAdmin: boolean;
 };
 
 export type AuthVariables = {
@@ -72,7 +73,14 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     email: user.email,
     displayName: user.displayName,
     provider: "xivauth",
+    isAdmin: user.isAdmin,
   });
   c.set("user", user);
+  await next();
+});
+
+export const requireAdmin = createMiddleware<AppEnv>(async (c, next) => {
+  const user = c.get("user");
+  if (!user?.isAdmin) forbidden("Admin access required");
   await next();
 });

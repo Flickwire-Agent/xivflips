@@ -32,6 +32,7 @@ export const users = pgTable(
     displayName: text("display_name"),
     homeWorldId: integer("home_world_id"),
     defaultTaxRateBps: integer("default_tax_rate_bps").notNull().default(500),
+    isAdmin: boolean("is_admin").notNull().default(false),
     ...timestamps(),
   },
   (table) => [index("users_subject_idx").on(table.subject)],
