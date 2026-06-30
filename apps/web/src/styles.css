@@ -1,0 +1,97 @@
+:root {
+  color-scheme: dark;
+  background: #090b12;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(80, 117, 255, 0.22), transparent 28rem),
+    linear-gradient(180deg, #090b12 0%, #111827 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 1rem 1rem 5.75rem;
+}
+
+.mobile-container {
+  width: min(100%, 58rem);
+  margin: 0 auto;
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 1.4rem;
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+}
+
+.bottom-nav a {
+  display: grid;
+  gap: 0.15rem;
+  place-items: center;
+  min-height: 3.25rem;
+  border-radius: 1rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.bottom-nav a.active {
+  color: white;
+  background: rgba(99, 102, 241, 0.28);
+}
+
+.glass-card {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.22);
+}
+
+.hero {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.sticky-actions {
+  position: sticky;
+  bottom: 5.4rem;
+  z-index: 10;
+  padding-top: 0.75rem;
+  background: linear-gradient(180deg, transparent, rgba(9, 11, 18, 0.92) 35%);
+}
+
+@media (min-width: 780px) {
+  .app-shell {
+    padding-bottom: 2rem;
+  }
+
+  .bottom-nav {
+    right: auto;
+    left: 50%;
+    width: 32rem;
+    transform: translateX(-50%);
+  }
+}
