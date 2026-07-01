@@ -341,10 +341,6 @@ function StatCard(props: { label: string; value: string; tone?: string; icon: Re
 }
 
 function FlipCard({ flip }: { flip: FlipDto }) {
-  const api = useApiClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
-  const isAdmin = me.data?.user.isAdmin ?? false;
-
   return (
     <Card component={NavLink} to={`/flips/${flip.id}`} className="glass-card" p="md" radius="xl">
       <Stack gap="sm">
@@ -360,7 +356,7 @@ function FlipCard({ flip }: { flip: FlipDto }) {
           </Group>
           <Badge>{flip.status.replaceAll("_", " ")}</Badge>
         </Group>
-        <SimpleGrid cols={isAdmin ? 3 : 2} spacing="xs">
+        <SimpleGrid cols={3} spacing="xs">
           <Box>
             <Text size="xs" c="dimmed">
               Profit
@@ -375,14 +371,12 @@ function FlipCard({ flip }: { flip: FlipDto }) {
             </Text>
             <Text fw={700}>{flip.profit.remainingQuantity}</Text>
           </Box>
-          {isAdmin ? (
-            <Box>
-              <Text size="xs" c="dimmed">
-                Market
-              </Text>
-              <SnapshotBadge capturedAt={flip.latestSnapshot?.capturedAt} />
-            </Box>
-          ) : null}
+          <Box>
+            <Text size="xs" c="dimmed">
+              Market
+            </Text>
+            <SnapshotBadge capturedAt={flip.latestSnapshot?.capturedAt} />
+          </Box>
         </SimpleGrid>
       </Stack>
     </Card>
@@ -392,7 +386,6 @@ function FlipCard({ flip }: { flip: FlipDto }) {
 function DashboardPage() {
   const api = useApiClient();
   const queryClient = useQueryClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: api.getDashboard });
   const refresh = useMutation({
     mutationFn: () => api.refreshMarket(),
@@ -411,23 +404,16 @@ function DashboardPage() {
   if (dashboard.error) return <ErrorView error={dashboard.error} />;
 
   const data = dashboard.data!;
-  const isAdmin = me.data?.user.isAdmin ?? false;
 
   return (
     <Stack>
       <PageHeader
         title="Dashboard"
-        description="Today's view of active gil, realized profit, and stale market context."
+        description="Today’s view of active gil, realized profit, and stale market context."
         action={
-          isAdmin ? (
-            <ActionIcon
-              variant="light"
-              onClick={() => refresh.mutate()}
-              loading={refresh.isPending}
-            >
-              <RefreshCw size={18} />
-            </ActionIcon>
-          ) : null
+          <ActionIcon variant="light" onClick={() => refresh.mutate()} loading={refresh.isPending}>
+            <RefreshCw size={18} />
+          </ActionIcon>
         }
       />
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
@@ -809,7 +795,6 @@ function FlipDetailPage() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
   const flip = useQuery({
     queryKey: ["flip", id],
     queryFn: () => api.getFlip(id!),
@@ -845,7 +830,6 @@ function FlipDetailPage() {
   if (flip.error) return <ErrorView error={flip.error} />;
 
   const current = flip.data!.flip;
-  const isAdmin = me.data?.user.isAdmin ?? false;
 
   return (
     <Stack>
@@ -854,7 +838,7 @@ function FlipDetailPage() {
         description={
           current.world ? `${current.world.name} • ${current.world.dataCenter}` : "No world"
         }
-        action={isAdmin ? <SnapshotBadge capturedAt={current.latestSnapshot?.capturedAt} /> : null}
+        action={<SnapshotBadge capturedAt={current.latestSnapshot?.capturedAt} />}
         icon={
           current.item?.iconUrl ? (
             <Image src={current.item.iconUrl} w={48} h={48} radius={8} />
@@ -877,29 +861,25 @@ function FlipDetailPage() {
           value={formatGil(current.profit.averageCostPerUnit)}
           icon={<WalletCards />}
         />
-        {isAdmin ? (
-          <StatCard
-            label="Market low"
-            value={
-              current.latestSnapshot?.lowestListingPrice
-                ? formatGil(current.latestSnapshot.lowestListingPrice)
-                : "-"
-            }
-            icon={<Clock3 />}
-          />
-        ) : null}
+        <StatCard
+          label="Market low"
+          value={
+            current.latestSnapshot?.lowestListingPrice
+              ? formatGil(current.latestSnapshot.lowestListingPrice)
+              : "-"
+          }
+          icon={<Clock3 />}
+        />
       </SimpleGrid>
       <Group grow>
-        {isAdmin ? (
-          <Button
-            variant="light"
-            leftSection={<RefreshCw size={16} />}
-            loading={refresh.isPending}
-            onClick={() => refresh.mutate(current)}
-          >
-            Refresh
-          </Button>
-        ) : null}
+        <Button
+          variant="light"
+          leftSection={<RefreshCw size={16} />}
+          loading={refresh.isPending}
+          onClick={() => refresh.mutate(current)}
+        >
+          Refresh
+        </Button>
         {current.status === "archived" ? (
           <Button variant="light" loading={restore.isPending} onClick={() => restore.mutate()}>
             Restore
@@ -988,9 +968,6 @@ function EventCard(props: {
 }
 
 function WatchlistCard({ item, onDelete }: { item: WatchlistItemDto; onDelete: () => void }) {
-  const api = useApiClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
-  const isAdmin = me.data?.user.isAdmin ?? false;
   const current =
     item.latestSnapshot?.lowestListingPrice ?? item.latestSnapshot?.recentAvgPrice ?? null;
   const meetsBuy = item.targetBuyPrice && current ? current <= item.targetBuyPrice : false;
@@ -1007,25 +984,23 @@ function WatchlistCard({ item, onDelete }: { item: WatchlistItemDto; onDelete: (
               </Text>
             </Box>
           </Group>
-          {isAdmin ? <SnapshotBadge capturedAt={item.latestSnapshot?.capturedAt} /> : null}
+          <SnapshotBadge capturedAt={item.latestSnapshot?.capturedAt} />
         </Group>
-        <SimpleGrid cols={isAdmin ? 3 : 2} spacing="xs">
+        <SimpleGrid cols={3} spacing="xs">
           <Box>
             <Text size="xs" c="dimmed">
               Target buy
             </Text>
             <Text fw={700}>{item.targetBuyPrice ? formatGil(item.targetBuyPrice) : "-"}</Text>
           </Box>
-          {isAdmin ? (
-            <Box>
-              <Text size="xs" c="dimmed">
-                Market
-              </Text>
-              <Text fw={700} c={meetsBuy ? "green" : "white"}>
-                {current ? formatGil(current) : "-"}
-              </Text>
-            </Box>
-          ) : null}
+          <Box>
+            <Text size="xs" c="dimmed">
+              Market
+            </Text>
+            <Text fw={700} c={meetsBuy ? "green" : "white"}>
+              {current ? formatGil(current) : "-"}
+            </Text>
+          </Box>
           <Box>
             <Text size="xs" c="dimmed">
               Sell
