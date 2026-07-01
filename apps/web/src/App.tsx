@@ -689,10 +689,17 @@ function EventForm(props: {
 }) {
   const api = useApiClient();
   const queryClient = useQueryClient();
+  const me = useQuery({ queryKey: ["me"], queryFn: api.getMe });
   const [quantity, setQuantity] = useState<string | number>(1);
   const [unitPrice, setUnitPrice] = useState<string | number>("");
   const [worldId, setWorldId] = useState("");
   const [taxRatePercent, setTaxRatePercent] = useState<string | number>(5);
+
+  useEffect(() => {
+    if (me.data?.user.defaultTaxRateBps != null) {
+      setTaxRatePercent(me.data.user.defaultTaxRateBps / 100);
+    }
+  }, [me.data?.user.defaultTaxRateBps]);
   const mutation = useMutation({
     mutationFn: () => {
       const body = {
