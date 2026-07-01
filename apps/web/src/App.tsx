@@ -139,12 +139,6 @@ function EmptyState(props: { title: string; description: string; action?: React.
   );
 }
 
-function SnapshotBadge({ capturedAt }: { capturedAt: string | null | undefined }) {
-  if (!capturedAt) return <Badge color="gray">No market snapshot</Badge>;
-  const hours = Math.max(0, Math.round((Date.now() - new Date(capturedAt).getTime()) / 3_600_000));
-  return <Badge color={hours <= 36 ? "green" : "yellow"}>{hours}h old</Badge>;
-}
-
 function WorldSelect(props: {
   worlds: WorldDto[];
   value: string;
@@ -369,12 +363,6 @@ function FlipCard({ flip }: { flip: FlipDto }) {
               Left
             </Text>
             <Text fw={700}>{flip.profit.remainingQuantity}</Text>
-          </Box>
-          <Box>
-            <Text size="xs" c="dimmed">
-              Market
-            </Text>
-            <SnapshotBadge capturedAt={flip.latestSnapshot?.capturedAt} />
           </Box>
         </SimpleGrid>
       </Stack>
@@ -809,7 +797,6 @@ function FlipDetailPage() {
         description={
           current.world ? `${current.world.name} • ${current.world.dataCenter}` : "No world"
         }
-        action={<SnapshotBadge capturedAt={current.latestSnapshot?.capturedAt} />}
         icon={
           current.item?.iconUrl ? (
             <Image src={current.item.iconUrl} w={48} h={48} radius={8} />
@@ -947,7 +934,6 @@ function WatchlistCard({ item, onDelete }: { item: WatchlistItemDto; onDelete: (
               </Text>
             </Box>
           </Group>
-          <SnapshotBadge capturedAt={item.latestSnapshot?.capturedAt} />
         </Group>
         <SimpleGrid cols={3} spacing="xs">
           <Box>
