@@ -8,7 +8,7 @@ import {
   refreshWorldCache,
   scopeKey,
   type SnapshotTarget,
-} from "../services/market.js";
+} from "../services/market-snapshot.js";
 
 function dedupeTargets(targets: SnapshotTarget[]): SnapshotTarget[] {
   return Array.from(

@@ -3,7 +3,8 @@ import type { Context, Hono } from "hono";
 import { config, isProduction } from "../config.js";
 import { createAppSessionToken, type AppEnv } from "../http/auth.js";
 import { badRequest } from "../http/errors.js";
-import { buildXivauthAuthorizeUrl, completeXivauthLogin } from "../services/xivauth.js";
+import { buildXivauthAuthorizeUrl } from "../services/xivauth-client.js";
+import { completeXivauthLogin } from "../services/xivauth-user.js";
 
 const sessionCookie = "xivflips_session";
 
