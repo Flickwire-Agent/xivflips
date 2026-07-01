@@ -595,7 +595,6 @@ function NewFlipPage() {
                 const item = results.find((i) => String(i.id) === optionValue);
                 if (item) handleSelectItem(item);
               }}
-              withinPortal={false}
             >
               <Combobox.Target>
                 <TextInput
