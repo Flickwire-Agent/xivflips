@@ -280,6 +280,8 @@ function ProtectedShell() {
     me.data.xivauthCharacters[0]?.name ??
     "Market tracker";
 
+  const avatarUrl = me.data.xivauthCharacters[0]?.avatarUrl ?? null;
+
   async function handleLogout() {
     await api.logoutSession().catch(() => undefined);
     navigate("/", { replace: true });
@@ -289,14 +291,17 @@ function ProtectedShell() {
     <div className="app-shell">
       <div className="mobile-container">
         <Group justify="space-between" mb="lg" wrap="nowrap">
-          <Box>
-            <Text size="xs" c="dimmed">
-              XIV Flips
-            </Text>
-            <Text fw={700} truncate="end" maw={240}>
-              {currentUserName}
-            </Text>
-          </Box>
+          <Group gap="sm" wrap="nowrap">
+            {avatarUrl ? <Image src={avatarUrl} w={40} h={40} radius="xl" /> : null}
+            <Box>
+              <Text size="xs" c="dimmed">
+                XIV Flips
+              </Text>
+              <Text fw={700} truncate="end" maw={240}>
+                {currentUserName}
+              </Text>
+            </Box>
+          </Group>
           <ActionIcon variant="subtle" aria-label="Log out" onClick={handleLogout}>
             <LogOut size={18} />
           </ActionIcon>
