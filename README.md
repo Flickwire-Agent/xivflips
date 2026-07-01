@@ -60,7 +60,7 @@ Run the daily snapshot worker manually with:
 pnpm --filter @xivflips/api market:snapshot
 ```
 
-Schedule that command once daily with cron, systemd timer, or pm2. The worker pulls tracked and watchlisted item data from `XIVARBITRAGE_API_BASE_URL`, stores a daily snapshot, prunes old snapshots, and exits.
+Schedule that command once daily with cron or systemd timer. The worker pulls tracked and watchlisted item data from `XIVARBITRAGE_API_BASE_URL`, stores a daily snapshot, prunes old snapshots, and exits.
 
 ## Verification
 

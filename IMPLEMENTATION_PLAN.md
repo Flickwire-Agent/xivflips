@@ -45,7 +45,7 @@ xivflips.projects.blueskye.co.uk/
 ### API
 
 - Hono for portable HTTP routing.
-- Node adapter initially for local pm2 deployment.
+- Node adapter initially for local systemd deployment.
 - Keep runtime-specific code at entrypoints only, so core routes/services remain portable.
 - `jose` for signed app session and OAuth state tokens.
 - Zod for request/response validation.
@@ -60,7 +60,7 @@ xivflips.projects.blueskye.co.uk/
 ### Background Work
 
 - Implement a separate market snapshot worker/CLI in `apps/api`.
-- The worker runs once and exits, so it can be scheduled by cron, systemd timer, pm2, GitHub Actions, or another scheduler.
+- The worker runs once and exits, so it can be scheduled by cron, systemd timer, GitHub Actions, or another scheduler.
 - Production default: schedule once daily on the server.
 - Avoid tying market refresh to web request handling.
 
@@ -404,7 +404,7 @@ pnpm build
 
 Initial deployment on this host:
 
-- API runs as a Node process under pm2.
+- API runs as a Node process under a systemd user service.
 - Web build served either by Hono static middleware or Caddy static hosting.
 - API exposed under the same hostname at `/api` to avoid CORS complexity.
 - Background snapshot worker scheduled daily via cron or systemd timer.

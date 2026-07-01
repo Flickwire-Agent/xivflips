@@ -110,7 +110,7 @@ Acceptance check:
 - [ ] Insert daily market snapshots.
 - [ ] Add summary logging: checked, inserted, skipped, failed, duration.
 - [ ] Add retention cleanup using `MARKET_SNAPSHOT_RETENTION_DAYS`.
-- [ ] Document cron/systemd/pm2 scheduling.
+- [ ] Document cron/systemd timer scheduling.
 
 Acceptance check:
 
@@ -219,7 +219,7 @@ Acceptance check:
 - [ ] Apply migrations in production.
 - [ ] Configure XIVAuth production callback URL.
 - [ ] Build web and API.
-- [ ] Configure pm2 API process.
+- [ ] Configure systemd user service for API process.
 - [ ] Configure Caddy/static serving/reverse proxy.
 - [ ] Configure daily worker schedule.
 - [ ] Verify production health endpoint.
