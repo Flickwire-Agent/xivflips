@@ -831,7 +831,9 @@ function FlipDetailPage() {
           value={
             current.latestSnapshot?.lowestListingPrice
               ? formatGil(current.latestSnapshot.lowestListingPrice)
-              : "-"
+              : current.latestSnapshot?.recentAvgPrice
+                ? formatGil(current.latestSnapshot.recentAvgPrice)
+                : "-"
           }
           icon={<Clock3 />}
         />
