@@ -6,12 +6,15 @@ import {
   Button,
   Card,
   Center,
+  Combobox,
   Divider,
   Group,
+  Image,
   Loader,
   NativeSelect,
   NumberInput,
   Paper,
+  ScrollArea,
   SegmentedControl,
   SimpleGrid,
   Stack,
@@ -20,10 +23,12 @@ import {
   TextInput,
   Textarea,
   Title,
+  useCombobox,
 } from "@mantine/core";
+import { useDebouncedCallback } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FlipDetailDto, FlipDto, WatchlistItemDto, WorldDto } from "@xivflips/shared";
+import type { FlipDetailDto, FlipDto, ItemDto, WatchlistItemDto, WorldDto } from "@xivflips/shared";
 import { formatGil, formatPercentFromBps } from "@xivflips/shared";
 import {
   BarChart3,
@@ -508,18 +513,55 @@ function NewFlipPage() {
   const api = useApiClient();
   const navigate = useNavigate();
   const worldsQuery = useQuery({ queryKey: ["worlds"], queryFn: api.getWorlds });
-  const [itemId, setItemId] = useState<string | number>("");
-  const [itemName, setItemName] = useState("");
+  const [selectedItem, setSelectedItem] = useState<ItemDto | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [worldId, setWorldId] = useState("");
   const [quantity, setQuantity] = useState<string | number>(1);
   const [unitPrice, setUnitPrice] = useState<string | number>("");
   const [targetSellPrice, setTargetSellPrice] = useState<string | number>("");
   const [notes, setNotes] = useState("");
+
+  const combobox = useCombobox({
+    onDropdownClose: () => combobox.resetSelectedOption(),
+  });
+
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    setDebouncedQuery(query);
+  }, 300);
+
+  const itemSearch = useQuery({
+    queryKey: ["item-search", debouncedQuery],
+    queryFn: () => api.searchItems(debouncedQuery),
+    enabled: debouncedQuery.length >= 2,
+    staleTime: 60_000,
+  });
+
+  function handleSearchChange(value: string) {
+    setSearchValue(value);
+    setSelectedItem(null);
+    debouncedSearch(value);
+    if (value.length >= 2) {
+      combobox.openDropdown();
+    } else {
+      combobox.closeDropdown();
+    }
+  }
+
+  function handleSelectItem(item: ItemDto) {
+    setSelectedItem(item);
+    setSearchValue(item.name);
+    combobox.closeDropdown();
+  }
+
+  const results = itemSearch.data?.items ?? [];
+
   const mutation = useMutation({
-    mutationFn: () =>
-      api.createFlip({
-        itemId: toInt(itemId),
-        itemName: itemName || undefined,
+    mutationFn: () => {
+      if (!selectedItem) throw new Error("Please select an item");
+      return api.createFlip({
+        itemId: selectedItem.id,
+        itemName: selectedItem.name,
         worldId: worldId ? Number(worldId) : null,
         targetSellPrice: optionalInt(targetSellPrice),
         notes: notes || null,
@@ -528,7 +570,8 @@ function NewFlipPage() {
           unitPrice: toInt(unitPrice),
           worldId: worldId ? Number(worldId) : null,
         },
-      }),
+      });
+    },
     onSuccess: (result) => navigate(`/flips/${result.flip.id}`),
     onError: notifyError,
   });
@@ -547,13 +590,63 @@ function NewFlipPage() {
         />
         <Paper className="glass-card" p="md" radius="xl">
           <Stack>
-            <NumberInput label="Item ID" value={itemId} onChange={setItemId} required min={1} />
-            <TextInput
-              label="Item name"
-              description="Optional, used immediately while metadata warms up."
-              value={itemName}
-              onChange={(event) => setItemName(event.currentTarget.value)}
-            />
+            <Combobox
+              onOptionSubmit={(optionValue) => {
+                const item = results.find((i) => String(i.id) === optionValue);
+                if (item) handleSelectItem(item);
+              }}
+              withinPortal={false}
+            >
+              <Combobox.Target>
+                <TextInput
+                  label="Item"
+                  placeholder="Search by name or ID..."
+                  value={searchValue}
+                  onChange={(event) => handleSearchChange(event.currentTarget.value)}
+                  onFocus={() => {
+                    if (searchValue.length >= 2) combobox.openDropdown();
+                  }}
+                  rightSection={
+                    itemSearch.isFetching ? (
+                      <Loader size="xs" />
+                    ) : selectedItem ? (
+                      <Tag size={14} />
+                    ) : null
+                  }
+                  required
+                />
+              </Combobox.Target>
+              <Combobox.Dropdown>
+                <Combobox.Options>
+                  <ScrollArea.Autosize mah={250} type="scroll">
+                    {results.length === 0 && !itemSearch.isFetching ? (
+                      <Combobox.Empty>
+                        {debouncedQuery.length < 2
+                          ? "Type at least 2 characters to search"
+                          : "No items found"}
+                      </Combobox.Empty>
+                    ) : null}
+                    {results.map((item) => (
+                      <Combobox.Option value={String(item.id)} key={item.id}>
+                        <Group gap="xs" wrap="nowrap">
+                          {item.iconUrl ? (
+                            <Image src={item.iconUrl} w={28} h={28} radius={4} />
+                          ) : null}
+                          <div>
+                            <Text size="sm">{item.name}</Text>
+                            {item.categoryName ? (
+                              <Text size="xs" c="dimmed">
+                                {item.categoryName}
+                              </Text>
+                            ) : null}
+                          </div>
+                        </Group>
+                      </Combobox.Option>
+                    ))}
+                  </ScrollArea.Autosize>
+                </Combobox.Options>
+              </Combobox.Dropdown>
+            </Combobox>
             <WorldSelect
               worlds={worldsQuery.data?.worlds ?? []}
               value={worldId}
@@ -589,7 +682,13 @@ function NewFlipPage() {
           </Stack>
         </Paper>
         <div className="sticky-actions">
-          <Button type="submit" fullWidth size="lg" loading={mutation.isPending}>
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            loading={mutation.isPending}
+            disabled={!selectedItem}
+          >
             Save flip
           </Button>
         </div>
