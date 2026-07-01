@@ -98,6 +98,20 @@ function normalizeItem(itemId: number, details: XivarbitrageItemDetails | null) 
   };
 }
 
+export async function updateItemAveragePrice(
+  itemId: number,
+  avgPrice: number | null,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(items)
+    .set({
+      averageSoldPrice: avgPrice,
+      updatedAt: new Date(),
+    })
+    .where(eq(items.id, itemId));
+}
+
 function soldAtDate(sale: XivarbitrageSale): Date | null {
   if (sale.soldAt) {
     const date = new Date(sale.soldAt);
@@ -388,6 +402,11 @@ export async function captureMarketSnapshot(target: SnapshotTarget): Promise<Sna
             targetSales.reduce((total, sale) => total + sale.pricePerUnit, 0) / targetSales.length,
           )
         : null;
+
+    if (recentAvgPrice !== null) {
+      await updateItemAveragePrice(target.itemId, recentAvgPrice);
+    }
+
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
     const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
@@ -444,4 +463,27 @@ export async function pruneOldSnapshots(retentionDays = config.marketSnapshotRet
   const db = getDb();
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
   await db.delete(marketSnapshots).where(lt(marketSnapshots.capturedAt, cutoff));
+}
+
+export async function refreshAllMarketableItemPrices(): Promise<void> {
+  const db = getDb();
+  const marketableItems = await db.query.items.findMany({
+    where: (table, { eq }) => eq(table.isMarketable, true),
+  });
+
+  for (const item of marketableItems) {
+    try {
+      const history = await fetchJson<XivarbitrageHistoryResponse>(`/items/${item.id}/history`);
+      const sales = history.sales ?? [];
+      if (sales.length === 0) continue;
+
+      const avgPrice = Math.round(
+        sales.reduce((total, sale) => total + sale.pricePerUnit, 0) / sales.length,
+      );
+
+      await updateItemAveragePrice(item.id, avgPrice);
+    } catch {
+      // skip items that fail
+    }
+  }
 }

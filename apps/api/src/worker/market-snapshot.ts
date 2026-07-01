@@ -4,6 +4,7 @@ import { flips, watchlistItems, worlds } from "../db/schema.js";
 import {
   captureMarketSnapshot,
   pruneOldSnapshots,
+  refreshAllMarketableItemPrices,
   refreshWorldCache,
   scopeKey,
   type SnapshotTarget,
@@ -50,7 +51,7 @@ async function getSnapshotTargets(): Promise<SnapshotTarget[]> {
 
 async function main() {
   const startedAt = Date.now();
-  console.log("[market-snapshot] Starting daily market snapshot job");
+  console.log("[market-snapshot] Starting 6-hourly market snapshot job");
 
   await refreshWorldCache().catch((error) => {
     console.warn(
@@ -70,6 +71,7 @@ async function main() {
     if (result.error) failures.push(`${target.itemId}/${scopeKey(target)}: ${result.error}`);
   }
 
+  await refreshAllMarketableItemPrices();
   await pruneOldSnapshots();
 
   const durationSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);

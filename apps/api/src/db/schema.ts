@@ -86,6 +86,7 @@ export const items = pgTable(
     iconUrl: text("icon_url"),
     categoryName: text("category_name"),
     isMarketable: boolean("is_marketable").notNull().default(true),
+    averageSoldPrice: integer("average_sold_price"),
     metadata: jsonb("metadata"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

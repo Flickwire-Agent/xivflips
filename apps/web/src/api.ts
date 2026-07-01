@@ -126,11 +126,6 @@ export function useApiClient() {
       request<{ watchlistItem: WatchlistItemDto }>("/watchlist", { method: "POST", body }),
     deleteWatchlistItem: (id: string) =>
       request<{ ok: true }>(`/watchlist/${id}`, { method: "DELETE" }),
-    refreshMarket: (body?: unknown) =>
-      request<{ checked: number; snapshots: number; failures: string[] }>("/market/refresh", {
-        method: "POST",
-        body: body ?? {},
-      }),
     getAdminUsers: () => request<{ users: AdminUser[] }>("/admin/users"),
     impersonateUser: (userId: string) =>
       request<{

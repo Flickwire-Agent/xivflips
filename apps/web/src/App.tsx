@@ -28,7 +28,7 @@ import {
 import { useDebouncedCallback } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { FlipDetailDto, FlipDto, ItemDto, WatchlistItemDto, WorldDto } from "@xivflips/shared";
+import type { FlipDto, ItemDto, WatchlistItemDto, WorldDto } from "@xivflips/shared";
 import { formatGil, formatPercentFromBps } from "@xivflips/shared";
 import {
   BarChart3,
@@ -36,7 +36,6 @@ import {
   ListChecks,
   LogOut,
   Plus,
-  RefreshCw,
   Settings,
   ShoppingBag,
   Sparkles,
@@ -385,20 +384,7 @@ function FlipCard({ flip }: { flip: FlipDto }) {
 
 function DashboardPage() {
   const api = useApiClient();
-  const queryClient = useQueryClient();
   const dashboard = useQuery({ queryKey: ["dashboard"], queryFn: api.getDashboard });
-  const refresh = useMutation({
-    mutationFn: () => api.refreshMarket(),
-    onSuccess: (result) => {
-      notifications.show({
-        color: "green",
-        title: "Market refresh complete",
-        message: `${result.snapshots}/${result.checked} snapshots updated`,
-      });
-      queryClient.invalidateQueries();
-    },
-    onError: notifyError,
-  });
 
   if (dashboard.isLoading) return <LoadingView />;
   if (dashboard.error) return <ErrorView error={dashboard.error} />;
@@ -410,11 +396,6 @@ function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Today’s view of active gil, realized profit, and stale market context."
-        action={
-          <ActionIcon variant="light" onClick={() => refresh.mutate()} loading={refresh.isPending}>
-            <RefreshCw size={18} />
-          </ActionIcon>
-        }
       />
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
         <StatCard
@@ -815,16 +796,6 @@ function FlipDetailPage() {
     },
     onError: notifyError,
   });
-  const refresh = useMutation({
-    mutationFn: (current: FlipDetailDto) =>
-      api.refreshMarket({
-        itemId: current.itemId,
-        worldId: current.worldId,
-        dataCenter: current.world?.dataCenter ?? null,
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["flip", id] }),
-    onError: notifyError,
-  });
 
   if (flip.isLoading) return <LoadingView />;
   if (flip.error) return <ErrorView error={flip.error} />;
@@ -862,7 +833,7 @@ function FlipDetailPage() {
           icon={<WalletCards />}
         />
         <StatCard
-          label="Market low"
+          label="Estimated Unit Value"
           value={
             current.latestSnapshot?.lowestListingPrice
               ? formatGil(current.latestSnapshot.lowestListingPrice)
@@ -872,14 +843,6 @@ function FlipDetailPage() {
         />
       </SimpleGrid>
       <Group grow>
-        <Button
-          variant="light"
-          leftSection={<RefreshCw size={16} />}
-          loading={refresh.isPending}
-          onClick={() => refresh.mutate(current)}
-        >
-          Refresh
-        </Button>
         {current.status === "archived" ? (
           <Button variant="light" loading={restore.isPending} onClick={() => restore.mutate()}>
             Restore

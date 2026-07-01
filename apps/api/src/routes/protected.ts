@@ -49,28 +49,17 @@ import {
   summarizeProfit,
 } from "../http/serialize.js";
 import {
-  captureMarketSnapshot,
   getLatestSnapshot,
   getLatestSnapshots,
   refreshWorldCache,
   scopeKey,
   searchItems,
   upsertItem,
-  type SnapshotTarget,
 } from "../services/market.js";
 import { buildXivauthAuthorizeUrl } from "../services/xivauth.js";
 
 const uuidParamSchema = z.object({ id: z.uuid() });
 const flipUuidParamSchema = z.object({ id: z.uuid() });
-const marketRefreshSchema = z
-  .object({
-    itemId: z.number().int().positive().optional(),
-    worldId: z.number().int().positive().nullable().optional(),
-    dataCenter: z.string().min(1).nullable().optional(),
-  })
-  .refine((value) => value.itemId !== undefined || value.worldId === undefined, {
-    message: "itemId is required when worldId is provided",
-  });
 
 type FlipBundle = {
   flip: FlipRow;
@@ -740,71 +729,5 @@ export function registerProtectedRoutes(app: Hono<AppEnv>) {
       .returning();
     if (result.length === 0) notFound("Watchlist item not found");
     return c.json({ ok: true });
-  });
-
-  app.post("/market/refresh", async (c) => {
-    const input = await readJson(c, marketRefreshSchema);
-    let targets: SnapshotTarget[];
-
-    if (input.itemId) {
-      targets = [
-        {
-          itemId: input.itemId,
-          worldId: input.worldId ?? null,
-          dataCenter: input.dataCenter ?? null,
-        },
-      ];
-    } else {
-      const db = getDb();
-      const userId = c.get("user").id;
-      const [flipTargets, watchTargets] = await Promise.all([
-        db
-          .select({ itemId: flips.itemId, worldId: flips.worldId, dataCenter: worlds.dataCenter })
-          .from(flips)
-          .leftJoin(worlds, eq(worlds.id, flips.worldId))
-          .where(
-            and(
-              eq(flips.userId, userId),
-              inArray(flips.status, ["active", "listed", "partially_sold"]),
-            ),
-          ),
-        db
-          .select({
-            itemId: watchlistItems.itemId,
-            worldId: watchlistItems.worldId,
-            dataCenter: watchlistItems.dataCenter,
-            worldDataCenter: worlds.dataCenter,
-          })
-          .from(watchlistItems)
-          .leftJoin(worlds, eq(worlds.id, watchlistItems.worldId))
-          .where(eq(watchlistItems.userId, userId)),
-      ]);
-      targets = [
-        ...flipTargets.map((target) => ({
-          itemId: target.itemId,
-          worldId: target.worldId,
-          dataCenter: target.dataCenter,
-        })),
-        ...watchTargets.map((target) => ({
-          itemId: target.itemId,
-          worldId: target.worldId,
-          dataCenter: target.dataCenter ?? target.worldDataCenter,
-        })),
-      ];
-    }
-
-    const uniqueTargets = Array.from(
-      new Map(targets.map((target) => [`${target.itemId}:${scopeKey(target)}`, target])).values(),
-    );
-    const results = [];
-    for (const target of uniqueTargets.slice(0, 20)) {
-      results.push(await captureMarketSnapshot(target));
-    }
-
-    return c.json({
-      checked: results.length,
-      snapshots: results.filter((result) => result.snapshot).length,
-      failures: results.filter((result) => result.error).map((result) => result.error),
-    });
   });
 }
