@@ -83,19 +83,27 @@ function notifyError(error: unknown) {
   });
 }
 
-function PageHeader(props: { title: string; description?: string; action?: React.ReactNode }) {
+function PageHeader(props: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
   return (
     <Group justify="space-between" align="flex-start" wrap="nowrap" mb="md">
-      <Box>
-        <Title order={1} size="h2">
-          {props.title}
-        </Title>
-        {props.description ? (
-          <Text c="dimmed" size="sm" mt={4}>
-            {props.description}
-          </Text>
-        ) : null}
-      </Box>
+      <Group gap="sm" wrap="nowrap" align="flex-start">
+        {props.icon}
+        <Box>
+          <Title order={1} size="h2">
+            {props.title}
+          </Title>
+          {props.description ? (
+            <Text c="dimmed" size="sm" mt={4}>
+              {props.description}
+            </Text>
+          ) : null}
+        </Box>
+      </Group>
       {props.action}
     </Group>
   );
@@ -332,12 +340,15 @@ function FlipCard({ flip }: { flip: FlipDto }) {
     <Card component={NavLink} to={`/flips/${flip.id}`} className="glass-card" p="md" radius="xl">
       <Stack gap="sm">
         <Group justify="space-between" align="flex-start" wrap="nowrap">
-          <Box>
-            <Text fw={800}>{flip.item?.name ?? `Item ${flip.itemId}`}</Text>
-            <Text size="sm" c="dimmed">
-              {flip.world ? `${flip.world.name} • ${flip.world.dataCenter}` : "No world"}
-            </Text>
-          </Box>
+          <Group gap="sm" wrap="nowrap">
+            {flip.item?.iconUrl ? <Image src={flip.item.iconUrl} w={40} h={40} radius={8} /> : null}
+            <Box>
+              <Text fw={800}>{flip.item?.name ?? `Item ${flip.itemId}`}</Text>
+              <Text size="sm" c="dimmed">
+                {flip.world ? `${flip.world.name} • ${flip.world.dataCenter}` : "No world"}
+              </Text>
+            </Box>
+          </Group>
           <Badge>{flip.status.replaceAll("_", " ")}</Badge>
         </Group>
         <SimpleGrid cols={3} spacing="xs">
@@ -823,6 +834,11 @@ function FlipDetailPage() {
           current.world ? `${current.world.name} • ${current.world.dataCenter}` : "No world"
         }
         action={<SnapshotBadge capturedAt={current.latestSnapshot?.capturedAt} />}
+        icon={
+          current.item?.iconUrl ? (
+            <Image src={current.item.iconUrl} w={48} h={48} radius={8} />
+          ) : null
+        }
       />
       <SimpleGrid cols={2} spacing="sm">
         <StatCard
@@ -954,12 +970,15 @@ function WatchlistCard({ item, onDelete }: { item: WatchlistItemDto; onDelete: (
     <Paper className="glass-card" p="md" radius="xl">
       <Stack gap="sm">
         <Group justify="space-between" wrap="nowrap">
-          <Box>
-            <Text fw={800}>{item.item?.name ?? `Item ${item.itemId}`}</Text>
-            <Text size="sm" c="dimmed">
-              {item.world?.name ?? item.dataCenter ?? "Any world"}
-            </Text>
-          </Box>
+          <Group gap="sm" wrap="nowrap">
+            {item.item?.iconUrl ? <Image src={item.item.iconUrl} w={40} h={40} radius={8} /> : null}
+            <Box>
+              <Text fw={800}>{item.item?.name ?? `Item ${item.itemId}`}</Text>
+              <Text size="sm" c="dimmed">
+                {item.world?.name ?? item.dataCenter ?? "Any world"}
+              </Text>
+            </Box>
+          </Group>
           <SnapshotBadge capturedAt={item.latestSnapshot?.capturedAt} />
         </Group>
         <SimpleGrid cols={3} spacing="xs">
@@ -997,23 +1016,61 @@ function WatchlistPage() {
   const queryClient = useQueryClient();
   const worlds = useQuery({ queryKey: ["worlds"], queryFn: api.getWorlds });
   const watchlist = useQuery({ queryKey: ["watchlist"], queryFn: api.getWatchlist });
-  const [itemId, setItemId] = useState<string | number>("");
-  const [itemName, setItemName] = useState("");
+  const [selectedItem, setSelectedItem] = useState<ItemDto | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [worldId, setWorldId] = useState("");
   const [targetBuyPrice, setTargetBuyPrice] = useState<string | number>("");
   const [targetSellPrice, setTargetSellPrice] = useState<string | number>("");
+
+  const combobox = useCombobox({
+    onDropdownClose: () => combobox.resetSelectedOption(),
+  });
+
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    setDebouncedQuery(query);
+  }, 300);
+
+  const itemSearch = useQuery({
+    queryKey: ["watchlist-item-search", debouncedQuery],
+    queryFn: () => api.searchItems(debouncedQuery),
+    enabled: debouncedQuery.length >= 2,
+    staleTime: 60_000,
+  });
+
+  function handleSearchChange(value: string) {
+    setSearchValue(value);
+    setSelectedItem(null);
+    debouncedSearch(value);
+    if (value.length >= 2) {
+      combobox.openDropdown();
+    } else {
+      combobox.closeDropdown();
+    }
+  }
+
+  function handleSelectItem(item: ItemDto) {
+    setSelectedItem(item);
+    setSearchValue(item.name);
+    combobox.closeDropdown();
+  }
+
+  const results = itemSearch.data?.items ?? [];
+
   const add = useMutation({
-    mutationFn: () =>
-      api.createWatchlistItem({
-        itemId: toInt(itemId),
-        itemName: itemName || undefined,
+    mutationFn: () => {
+      if (!selectedItem) throw new Error("Please select an item");
+      return api.createWatchlistItem({
+        itemId: selectedItem.id,
+        itemName: selectedItem.name,
         worldId: worldId ? Number(worldId) : null,
         targetBuyPrice: optionalInt(targetBuyPrice),
         targetSellPrice: optionalInt(targetSellPrice),
-      }),
+      });
+    },
     onSuccess: () => {
-      setItemId("");
-      setItemName("");
+      setSelectedItem(null);
+      setSearchValue("");
       setTargetBuyPrice("");
       setTargetSellPrice("");
       queryClient.invalidateQueries({ queryKey: ["watchlist"] });
@@ -1043,14 +1100,63 @@ function WatchlistPage() {
             <Star size={20} />
             <Text fw={800}>Add target</Text>
           </Group>
-          <SimpleGrid cols={2} spacing="sm">
-            <NumberInput label="Item ID" value={itemId} onChange={setItemId} min={1} required />
-            <TextInput
-              label="Name"
-              value={itemName}
-              onChange={(e) => setItemName(e.currentTarget.value)}
-            />
-          </SimpleGrid>
+          <Combobox
+            store={combobox}
+            onOptionSubmit={(optionValue) => {
+              const item = results.find((i) => String(i.id) === optionValue);
+              if (item) handleSelectItem(item);
+            }}
+          >
+            <Combobox.Target>
+              <TextInput
+                label="Item"
+                placeholder="Search by name or ID..."
+                value={searchValue}
+                onChange={(event) => handleSearchChange(event.currentTarget.value)}
+                onFocus={() => {
+                  if (searchValue.length >= 2) combobox.openDropdown();
+                }}
+                rightSection={
+                  itemSearch.isFetching ? (
+                    <Loader size="xs" />
+                  ) : selectedItem ? (
+                    <Tag size={14} />
+                  ) : null
+                }
+                required
+              />
+            </Combobox.Target>
+            <Combobox.Dropdown>
+              <Combobox.Options>
+                <ScrollArea.Autosize mah={250} type="scroll">
+                  {results.length === 0 && !itemSearch.isFetching ? (
+                    <Combobox.Empty>
+                      {debouncedQuery.length < 2
+                        ? "Type at least 2 characters to search"
+                        : "No items found"}
+                    </Combobox.Empty>
+                  ) : null}
+                  {results.map((item) => (
+                    <Combobox.Option value={String(item.id)} key={item.id}>
+                      <Group gap="xs" wrap="nowrap">
+                        {item.iconUrl ? (
+                          <Image src={item.iconUrl} w={28} h={28} radius={4} />
+                        ) : null}
+                        <div>
+                          <Text size="sm">{item.name}</Text>
+                          {item.categoryName ? (
+                            <Text size="xs" c="dimmed">
+                              {item.categoryName}
+                            </Text>
+                          ) : null}
+                        </div>
+                      </Group>
+                    </Combobox.Option>
+                  ))}
+                </ScrollArea.Autosize>
+              </Combobox.Options>
+            </Combobox.Dropdown>
+          </Combobox>
           <WorldSelect worlds={worlds.data?.worlds ?? []} value={worldId} onChange={setWorldId} />
           <SimpleGrid cols={2} spacing="sm">
             <NumberInput
