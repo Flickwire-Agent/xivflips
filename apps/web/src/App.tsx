@@ -591,6 +591,7 @@ function NewFlipPage() {
         <Paper className="glass-card" p="md" radius="xl">
           <Stack>
             <Combobox
+              store={combobox}
               onOptionSubmit={(optionValue) => {
                 const item = results.find((i) => String(i.id) === optionValue);
                 if (item) handleSelectItem(item);
