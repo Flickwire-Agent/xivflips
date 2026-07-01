@@ -85,8 +85,7 @@ function itemDetailsFromResponse(
 function normalizeIconUrl(icon: string | undefined): string | null {
   if (!icon) return null;
   if (icon.startsWith("http://") || icon.startsWith("https://")) return icon;
-  if (icon.startsWith("/")) return `https://v2.xivapi.com${icon}`;
-  return icon;
+  return `https://v2.xivapi.com/api/asset?path=${encodeURIComponent(icon)}&format=png`;
 }
 
 function normalizeItem(itemId: number, details: XivarbitrageItemDetails | null) {
