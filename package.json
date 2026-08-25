@@ -16,8 +16,8 @@
     "test:run": "pnpm -r --if-present test:run"
   },
   "devDependencies": {
-    "@commitlint/cli": "~21.0.2",
-    "@commitlint/config-conventional": "~21.0.2",
+    "@commitlint/cli": "~21.2.2",
+    "@commitlint/config-conventional": "~21.2.2",
     "@types/node": "~25.9.3",
     "husky": "~9.1.7",
     "oxfmt": "~0.55.0",
